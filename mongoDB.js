@@ -3,10 +3,12 @@ import mongoose from "mongoose";
 const connectDB = async () => {
     try {
         const conn = await mongoose.connect(process.env.DATABASE_URL, {
-            dbName: 'amazonClone',
-            connectTimeoutMS: 10000,
-            serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000,
+            dbName: 'db1',
+            connectTimeoutMS: 60000,
+            // useNewUrlParser: true,
+            // useUnifiedTopology: true,
+            serverSelectionTimeoutMS:  60000,
+            socketTimeoutMS: 60000,
             maxPoolSize: 10,
             retryWrites: true,
             w: 'majority',
@@ -16,7 +18,7 @@ const connectDB = async () => {
 
         // console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
         // console.log(`✅ Database: ${conn.connection.name}`);
-        
+
     } catch (error) {
         console.error('❌ MongoDB Connection Error:', error.message);
         process.exit(1);

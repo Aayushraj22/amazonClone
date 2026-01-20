@@ -3,6 +3,9 @@ export class ApiResponse {
     this.success = statusCode >= 200 && statusCode < 300;
     this.statusCode = statusCode;
     this.message = message;
-    this.data = data;
+
+    if (data !== null) {
+      this.data = data;
+    }
   }
 }

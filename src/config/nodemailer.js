@@ -1,8 +1,10 @@
 import { createTransport } from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Create transporter ONCE
 const transporter = createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT) || 587,
   secure: false, // true for 465, false for others
   auth: {
@@ -48,13 +50,6 @@ const sendEmail = async ({ to, subject, text = "", html = "" }) => {
     text,
     html,
   };
-  
-
-  console.log("options : ", mailOptions);
-  console.log("🔍 SMTP DEBUG:");
-  console.log("User:", process.env.SMTP_USER_EMAIL);
-  console.log("Pass length:", process.env.SMTP_PASS?.length);
-  console.log("Pass starts with:", process.env.SMTP_PASS);
 
   try {
     const info = await transporter.sendMail(mailOptions);

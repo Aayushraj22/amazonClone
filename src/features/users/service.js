@@ -45,7 +45,7 @@ export const registerWithPassword = async ({
     },
     auth: {
       passwordHash: hashedPassword,
-      isEmailVerified: true,
+      isEmailVerified: false,
       role,
     },
     accountStatus: {
@@ -133,12 +133,6 @@ const clearExpiredOTPs = () => {
 
 // Implementation for sending OTP to email
 export const sendEmailOTP = async (email) => {
-  // Check existing user
-  const existingUser = await User.findOne({
-    "personalInfo.email": email,
-  }).lean();
-
-  console.log("EEEEEEE : ", existingUser);
 
   const otp = generateRandomOTP();
   const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
@@ -184,7 +178,7 @@ export const verifyEmailOTP = async (email, otp) => {
   const otpData = otpStore.get(email);
 
   if (!otpData || Date.now() > otpData.expiresAt) {
-    throw new Error("OTP expired or not found");
+    throw new ApiError(400,"OTP expired or not found");
   }
 
   const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
@@ -195,17 +189,59 @@ export const verifyEmailOTP = async (email, otp) => {
     if (otpData.attempts >= 3) {
       otpStore.delete(email);
     }
-    throw new Error("Invalid OTP");
+    throw new ApiError(400,`Invalid OTP, attempts left: ${3 - otpData.attempts}`);
   }
 
-  // Mark user as verified
-  const user = await User.findOneAndUpdate(
-    { "personalInfo.email": email },
-    { $set: { "auth.isEmailVerified": true } },
-    { new: true }
+  // Check existing user
+  const existingUser = await User.findOne({
+    "personalInfo.email": email,
+  }).lean();
+
+  // If already verified
+  if (existingUser && existingUser.auth.isEmailVerified) {
+    otpStore.delete(email);
+    throw new ApiError(400,"Email already verified");
+  }
+
+  let user = undefined;
+  if ( existingUser ) {
+    // Mark user as verified
+    user = await User.findOneAndUpdate(
+      { "personalInfo.email": email },
+      { $set: { "auth.isEmailVerified": true } },
+      { new: true }
+    );
+
+  } else {
+    user = await User.create({
+      personalInfo: {
+        email: email,
+        username: email.split("@")[0],
+      },
+      auth: {
+        isEmailVerified: true,
+      },
+      accountStatus: {
+        isActive: true,
+      },
+    });
+  } 
+
+  // generateToken
+  const token = jwt.sign(
+    {
+      userId: user._id,
+      email: user.personalInfo.email,
+      role: user.auth.role,
+    },
+    JWT_SECRET,
+    { expiresIn: "7d" }
   );
 
   // Cleanup
   otpStore.delete(email);
-  return user;
+  return {
+    token,
+    user,
+  };
 };
